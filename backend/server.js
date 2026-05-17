@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs').promises;
-const path = require('path');
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+const Group = require('./models/Group');
 
 const app = express();
 
@@ -12,32 +14,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const DATA_FILE = path.join(__dirname, 'data.json');
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('MongoDB Connected');
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
-// Helper to read data
-async function readData() {
-  try {
-    const data = await fs.readFile(DATA_FILE, 'utf8');
-    return JSON.parse(data || '{}');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await fs.writeFile(DATA_FILE, '{}', 'utf8');
-      return {};
-    }
-    throw err;
-  }
-}
-
-// Helper to write data
-async function writeData(data) {
-  await fs.writeFile(
-    DATA_FILE,
-    JSON.stringify(data, null, 2),
-    'utf8'
-  );
-}
-
-// Health check
+// Health Check
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -45,7 +31,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Create a group
+// Create Group
 app.post('/api/group', async (req, res) => {
   try {
     const { name } = req.body;
@@ -56,32 +42,20 @@ app.post('/api/group', async (req, res) => {
       });
     }
 
-    const data = await readData();
-
     let code;
 
     do {
       code = Math.floor(
         100000 + Math.random() * 900000
       ).toString();
-    } while (data[code]);
+    } while (await Group.findOne({ code }));
 
-    data[code] = {
+    const group = new Group({
       code,
-      name,
-      createdAt: new Date().toISOString(),
-      members: [],
-      expenses: [],
-      categories: [
-        'Food',
-        'Travel',
-        'Accommodation',
-        'Entertainment',
-        'Other'
-      ]
-    };
+      name
+    });
 
-    await writeData(data);
+    await group.save();
 
     res.json({ code });
 
@@ -94,12 +68,12 @@ app.post('/api/group', async (req, res) => {
   }
 });
 
-// Get group data
+// Get Group
 app.get('/api/group/:code', async (req, res) => {
   try {
-    const data = await readData();
-
-    const group = data[req.params.code];
+    const group = await Group.findOne({
+      code: req.params.code
+    });
 
     if (!group) {
       return res.status(404).json({
@@ -118,7 +92,7 @@ app.get('/api/group/:code', async (req, res) => {
   }
 });
 
-// Add a member
+// Add Member
 app.post('/api/group/:code/member', async (req, res) => {
   try {
     const { name } = req.body;
@@ -130,9 +104,7 @@ app.post('/api/group/:code/member', async (req, res) => {
       });
     }
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -146,10 +118,10 @@ app.post('/api/group/:code/member', async (req, res) => {
     group.members.push({
       id: memberId,
       name,
-      joinedAt: new Date().toISOString()
+      joinedAt: new Date()
     });
 
-    await writeData(data);
+    await group.save();
 
     res.json({ memberId });
 
@@ -162,7 +134,7 @@ app.post('/api/group/:code/member', async (req, res) => {
   }
 });
 
-// Add an expense
+// Add Expense
 app.post('/api/group/:code/expense', async (req, res) => {
   try {
     const {
@@ -177,9 +149,7 @@ app.post('/api/group/:code/expense', async (req, res) => {
 
     const { code } = req.params;
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -198,10 +168,10 @@ app.post('/api/group/:code/expense', async (req, res) => {
       payerId,
       splitType,
       splits,
-      date: date || new Date().toISOString()
+      date: date || new Date()
     });
 
-    await writeData(data);
+    await group.save();
 
     res.json({
       success: true,
@@ -217,7 +187,7 @@ app.post('/api/group/:code/expense', async (req, res) => {
   }
 });
 
-// Edit an expense
+// Update Expense
 app.put('/api/group/:code/expense/:expenseId', async (req, res) => {
   try {
     const {
@@ -232,9 +202,7 @@ app.put('/api/group/:code/expense/:expenseId', async (req, res) => {
 
     const { code, expenseId } = req.params;
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -242,31 +210,25 @@ app.put('/api/group/:code/expense/:expenseId', async (req, res) => {
       });
     }
 
-    const expenseIndex =
-      group.expenses.findIndex(
-        e => e.id === expenseId
-      );
+    const expense = group.expenses.find(
+      e => e.id === expenseId
+    );
 
-    if (expenseIndex === -1) {
+    if (!expense) {
       return res.status(404).json({
         error: 'Expense not found'
       });
     }
 
-    group.expenses[expenseIndex] = {
-      ...group.expenses[expenseIndex],
-      title,
-      amount: parseFloat(amount),
-      category,
-      payerId,
-      splitType,
-      splits,
-      date:
-        date ||
-        group.expenses[expenseIndex].date
-    };
+    expense.title = title;
+    expense.amount = parseFloat(amount);
+    expense.category = category;
+    expense.payerId = payerId;
+    expense.splitType = splitType;
+    expense.splits = splits;
+    expense.date = date || expense.date;
 
-    await writeData(data);
+    await group.save();
 
     res.json({
       success: true
@@ -281,14 +243,12 @@ app.put('/api/group/:code/expense/:expenseId', async (req, res) => {
   }
 });
 
-// Delete an expense
+// Delete Expense
 app.delete('/api/group/:code/expense/:expenseId', async (req, res) => {
   try {
     const { code, expenseId } = req.params;
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -296,20 +256,11 @@ app.delete('/api/group/:code/expense/:expenseId', async (req, res) => {
       });
     }
 
-    const expenseIndex =
-      group.expenses.findIndex(
-        e => e.id === expenseId
-      );
+    group.expenses = group.expenses.filter(
+      e => e.id !== expenseId
+    );
 
-    if (expenseIndex === -1) {
-      return res.status(404).json({
-        error: 'Expense not found'
-      });
-    }
-
-    group.expenses.splice(expenseIndex, 1);
-
-    await writeData(data);
+    await group.save();
 
     res.json({
       success: true
@@ -324,7 +275,7 @@ app.delete('/api/group/:code/expense/:expenseId', async (req, res) => {
   }
 });
 
-// Add a category
+// Add Category
 app.post('/api/group/:code/category', async (req, res) => {
   try {
     const { category } = req.body;
@@ -336,9 +287,7 @@ app.post('/api/group/:code/category', async (req, res) => {
       });
     }
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -346,20 +295,10 @@ app.post('/api/group/:code/category', async (req, res) => {
       });
     }
 
-    if (!group.categories) {
-      group.categories = [
-        'Food',
-        'Travel',
-        'Accommodation',
-        'Entertainment',
-        'Other'
-      ];
-    }
-
     if (!group.categories.includes(category)) {
       group.categories.push(category);
 
-      await writeData(data);
+      await group.save();
     }
 
     res.json({
@@ -376,14 +315,12 @@ app.post('/api/group/:code/category', async (req, res) => {
   }
 });
 
-// Delete a category
+// Delete Category
 app.delete('/api/group/:code/category/:categoryName', async (req, res) => {
   try {
     const { code, categoryName } = req.params;
 
-    const data = await readData();
-
-    const group = data[code];
+    const group = await Group.findOne({ code });
 
     if (!group) {
       return res.status(404).json({
@@ -391,22 +328,11 @@ app.delete('/api/group/:code/category/:categoryName', async (req, res) => {
       });
     }
 
-    if (!group.categories) {
-      group.categories = [
-        'Food',
-        'Travel',
-        'Accommodation',
-        'Entertainment',
-        'Other'
-      ];
-    }
+    group.categories = group.categories.filter(
+      c => c !== categoryName
+    );
 
-    group.categories =
-      group.categories.filter(
-        c => c !== categoryName
-      );
-
-    await writeData(data);
+    await group.save();
 
     res.json({
       success: true,
