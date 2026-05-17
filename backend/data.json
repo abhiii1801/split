@@ -1,0 +1,85 @@
+{
+  "365809": {
+    "code": "365809",
+    "name": "Hum Teen",
+    "createdAt": "2026-05-17T16:57:15.292Z",
+    "members": [
+      {
+        "id": "m_r86uj1ls4",
+        "name": "Abhinav",
+        "joinedAt": "2026-05-17T16:57:15.306Z"
+      },
+      {
+        "id": "m_y0o6u1lin",
+        "name": "New user",
+        "joinedAt": "2026-05-17T16:57:41.572Z"
+      },
+      {
+        "id": "m_62qgky5rd",
+        "name": "sdawdasdfcsxvfbg",
+        "joinedAt": "2026-05-17T17:08:16.270Z"
+      },
+      {
+        "id": "m_ii7m6ep3p",
+        "name": "asdwdasd",
+        "joinedAt": "2026-05-17T17:29:43.869Z"
+      }
+    ],
+    "expenses": [
+      {
+        "id": "e_bj7n05nux",
+        "title": "asdas",
+        "amount": 340,
+        "category": "Other",
+        "payerId": "m_r86uj1ls4",
+        "splitType": "EXACT",
+        "splits": {
+          "m_r86uj1ls4": 20,
+          "m_y0o6u1lin": 320
+        },
+        "date": "2026-05-17T16:58:26.852Z"
+      },
+      {
+        "id": "e_84ybje5dh",
+        "title": "asdsa",
+        "amount": 123,
+        "category": "Food",
+        "payerId": "m_r86uj1ls4",
+        "splitType": "EQUAL",
+        "splits": {
+          "m_r86uj1ls4": 61.5,
+          "m_y0o6u1lin": 61.5
+        },
+        "date": "2026-05-17T17:08:00.536Z"
+      },
+      {
+        "id": "e_ipv9qc6ek",
+        "title": "sdasec",
+        "amount": 50,
+        "category": "Food",
+        "payerId": "m_r86uj1ls4",
+        "splitType": "EXACT",
+        "splits": {
+          "m_r86uj1ls4": 30,
+          "m_y0o6u1lin": 20,
+          "m_62qgky5rd": 0
+        },
+        "date": "2026-05-17T17:08:40.517Z"
+      },
+      {
+        "id": "e_t5ec7lyig",
+        "title": "wasdewde",
+        "amount": 100,
+        "category": "Food",
+        "payerId": "m_y0o6u1lin",
+        "splitType": "EXACT",
+        "splits": {
+          "m_r86uj1ls4": 0,
+          "m_y0o6u1lin": 70,
+          "m_62qgky5rd": 30
+        },
+        "date": "2026-05-17T17:09:18.483Z"
+      }
+    ]
+  }
+}
