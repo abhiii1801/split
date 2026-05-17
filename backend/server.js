@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 
 app.use(cors({
-  origin: '*',
+  origin: 'https://split-ecru.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
