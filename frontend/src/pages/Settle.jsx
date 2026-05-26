@@ -10,7 +10,8 @@ export default function Settle() {
   const [transactions, setTransactions] = useState([]);
   const [group, setGroup] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ fromId: '', toId: '', amount: '', note: '', date: '' });
+  const todayString = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({ fromId: '', toId: '', amount: '', note: '', date: todayString });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,7 +78,7 @@ export default function Settle() {
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">Payments</h2>
-            <button className="btn-secondary" style={{ width: 'auto', padding: '10px 16px' }} onClick={() => { setShowForm(s => !s); setEditingId(null); setForm({ fromId: '', toId: '', amount: '', note: '', date: '' }); }}>
+            <button className="btn-secondary" style={{ width: 'auto', padding: '10px 16px' }} onClick={() => { setShowForm(s => !s); setEditingId(null); setForm({ fromId: '', toId: '', amount: '', note: '', date: todayString }); }}>
               {showForm ? 'Close' : 'Add Payment'}
             </button>
           </div>
@@ -107,7 +108,7 @@ export default function Settle() {
                 <button className="btn-primary" style={{ width: 'auto', padding: '12px 24px' }} onClick={async () => {
                   if (!form.fromId || !form.toId || !form.amount) return;
                   try {
-                    const payload = { fromId: form.fromId, toId: form.toId, amount: parseFloat(form.amount), note: form.note, date: form.date };
+                    const payload = { fromId: form.fromId, toId: form.toId, amount: parseFloat(form.amount), note: form.note, date: form.date || todayString };
                     if (editingId) {
                       await updatePayment(code, editingId, payload);
                     } else {
@@ -118,14 +119,14 @@ export default function Settle() {
                     setTransactions(calculateSettlements(data));
                     setShowForm(false);
                     setEditingId(null);
-                    setForm({ fromId: '', toId: '', amount: '', note: '', date: '' });
+                    setForm({ fromId: '', toId: '', amount: '', note: '', date: todayString });
                   } catch (err) {
                     // ignore for now
                   }
                 }}>
                   {editingId ? 'Update' : 'Save'}
                 </button>
-                <button className="btn-secondary" style={{ width: 'auto', padding: '12px 24px' }} onClick={() => { setShowForm(false); setEditingId(null); setForm({ fromId: '', toId: '', amount: '', note: '', date: '' }); }}>
+                <button className="btn-secondary" style={{ width: 'auto', padding: '12px 24px' }} onClick={() => { setShowForm(false); setEditingId(null); setForm({ fromId: '', toId: '', amount: '', note: '', date: todayString }); }}>
                   Cancel
                 </button>
               </div>
