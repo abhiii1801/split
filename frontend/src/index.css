@@ -144,6 +144,27 @@ input, select {
   background-color: #f8fafc;
 }
 
+.btn-tertiary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-tertiary:hover {
+  background: #f8fafc;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 /* Modern Input Controls */
 .input-field {
   width: 100%;
