@@ -275,6 +275,99 @@ app.delete('/api/group/:code/expense/:expenseId', async (req, res) => {
   }
 });
 
+// Add Payment (person-to-person)
+app.post('/api/group/:code/payment', async (req, res) => {
+  try {
+    const { fromId, toId, amount, note, date } = req.body;
+    const { code } = req.params;
+
+    const group = await Group.findOne({ code });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    const paymentId = 'p_' + Math.random().toString(36).substring(2, 11);
+
+    group.payments.push({
+      id: paymentId,
+      fromId,
+      toId,
+      amount: parseFloat(amount),
+      note,
+      date: date || new Date()
+    });
+
+    await group.save();
+
+    res.json({ success: true, paymentId });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update Payment
+app.put('/api/group/:code/payment/:paymentId', async (req, res) => {
+  try {
+    const { fromId, toId, amount, note, date } = req.body;
+    const { code, paymentId } = req.params;
+
+    const group = await Group.findOne({ code });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    const payment = group.payments.find(p => p.id === paymentId);
+
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    payment.fromId = fromId;
+    payment.toId = toId;
+    payment.amount = parseFloat(amount);
+    payment.note = note;
+    payment.date = date || payment.date;
+
+    await group.save();
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete Payment
+app.delete('/api/group/:code/payment/:paymentId', async (req, res) => {
+  try {
+    const { code, paymentId } = req.params;
+
+    const group = await Group.findOne({ code });
+
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+
+    group.payments = group.payments.filter(p => p.id !== paymentId);
+
+    await group.save();
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Add Category
 app.post('/api/group/:code/category', async (req, res) => {
   try {

@@ -31,6 +31,21 @@ export const addExpense = async (code, expense) => {
   return res.data;
 };
 
+export const addPayment = async (code, payment) => {
+  const res = await api.post(`/group/${code}/payment`, payment);
+  return res.data;
+};
+
+export const updatePayment = async (code, paymentId, payment) => {
+  const res = await api.put(`/group/${code}/payment/${paymentId}`, payment);
+  return res.data;
+};
+
+export const deletePayment = async (code, paymentId) => {
+  const res = await api.delete(`/group/${code}/payment/${paymentId}`);
+  return res.data;
+};
+
 export const updateExpense = async (code, expenseId, expense) => {
   const res = await api.put(`/group/${code}/expense/${expenseId}`, expense);
   return res.data;
@@ -73,6 +88,15 @@ export const calculateSettlements = (group) => {
       }
     }
   });
+
+  // Apply person-to-person payments to balances (payments reduce outstanding balances)
+  if (group.payments && Array.isArray(group.payments)) {
+    group.payments.forEach(p => {
+      const amt = parseFloat(p.amount) || 0;
+      if (balances[p.fromId] !== undefined) balances[p.fromId] += amt;
+      if (balances[p.toId] !== undefined) balances[p.toId] -= amt;
+    });
+  }
 
   const debtors = [];
   const creditors = [];

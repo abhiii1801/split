@@ -35,6 +35,21 @@ const ExpenseSchema = new mongoose.Schema({
   }
 });
 
+const PaymentSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
+  fromId: String,
+  toId: String,
+  amount: Number,
+  note: String,
+  date: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const GroupSchema = new mongoose.Schema({
   code: {
     type: String,
@@ -59,6 +74,11 @@ const GroupSchema = new mongoose.Schema({
 
   expenses: {
     type: [ExpenseSchema],
+    default: []
+  },
+
+  payments: {
+    type: [PaymentSchema],
     default: []
   },
 
