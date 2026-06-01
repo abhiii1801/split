@@ -41,7 +41,8 @@ export default function Settle() {
     <>
       <div className="page-content">
         <h1 className="text-xl font-bold mb-2">Settle Up</h1>
-        <p className="text-sm text-muted mb-6">Suggested payments to minimize transactions</p>
+        <p className="text-sm text-muted mb-2">Direct payments based on who paid for whom.</p>
+        <p className="text-sm text-muted mb-6">Each expense is settled individually with the original payer — no cross-person netting or transitive reshuffling.</p>
 
         {transactions.length === 0 ? (
           <div className="text-center text-muted mt-8">

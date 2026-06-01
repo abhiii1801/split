@@ -69,72 +69,65 @@ export const deleteCategory = async (code, categoryName) => {
 };
 
 // Compute settlements locally based on the group data returned from API
+// This preserves direct payback obligations: each non-payer owes the payer for that expense.
+// It does not net chain transactions across multiple payers/creditors.
+// Example: if A paid for B/C and B paid for A/B, A owes B and B owes C separately.
 export const calculateSettlements = (group) => {
   if (!group || !group.members || !group.expenses) return [];
 
-  const balances = {};
-  group.members.forEach(m => {
-    balances[m.id] = 0;
-  });
+  const debtMap = {};
+
+  const addDebt = (fromId, toId, amount) => {
+    if (!fromId || !toId || fromId === toId || amount <= 0) return;
+    debtMap[fromId] ||= {};
+    debtMap[fromId][toId] = (debtMap[fromId][toId] || 0) + amount;
+  };
+
+  const reduceDebt = (fromId, toId, amount) => {
+    if (!fromId || !toId || fromId === toId || amount <= 0) return;
+    const current = debtMap[fromId]?.[toId] || 0;
+    if (current >= amount) {
+      debtMap[fromId][toId] = current - amount;
+      if (debtMap[fromId][toId] < 0.01) {
+        delete debtMap[fromId][toId];
+      }
+    } else {
+      const leftover = amount - current;
+      if (current > 0) {
+        delete debtMap[fromId][toId];
+      }
+      addDebt(toId, fromId, leftover);
+    }
+  };
 
   group.expenses.forEach(exp => {
-    if (balances[exp.payerId] !== undefined) {
-      balances[exp.payerId] += parseFloat(exp.amount);
-    }
-
-    for (const [memberId, amount] of Object.entries(exp.splits)) {
-      if (balances[memberId] !== undefined) {
-        balances[memberId] -= parseFloat(amount);
+    if (!exp || !exp.splits) return;
+    for (const [memberId, rawAmount] of Object.entries(exp.splits)) {
+      const amount = parseFloat(rawAmount) || 0;
+      if (memberId !== exp.payerId && amount > 0) {
+        addDebt(memberId, exp.payerId, amount);
       }
     }
   });
 
-  // Apply person-to-person payments to balances (payments reduce outstanding balances)
   if (group.payments && Array.isArray(group.payments)) {
     group.payments.forEach(p => {
       const amt = parseFloat(p.amount) || 0;
-      if (balances[p.fromId] !== undefined) balances[p.fromId] += amt;
-      if (balances[p.toId] !== undefined) balances[p.toId] -= amt;
+      reduceDebt(p.fromId, p.toId, amt);
     });
   }
-
-  const debtors = [];
-  const creditors = [];
-
-  for (const [memberId, balance] of Object.entries(balances)) {
-    if (balance > 0.01) {
-      creditors.push({ memberId, amount: balance });
-    } else if (balance < -0.01) {
-      debtors.push({ memberId, amount: -balance });
-    }
-  }
-
-  debtors.sort((a, b) => b.amount - a.amount);
-  creditors.sort((a, b) => b.amount - a.amount);
 
   const transactions = [];
 
-  let d = 0;
-  let c = 0;
-
-  while (d < debtors.length && c < creditors.length) {
-    const debtor = debtors[d];
-    const creditor = creditors[c];
-
-    const amount = Math.min(debtor.amount, creditor.amount);
-
-    transactions.push({
-      from: debtor.memberId,
-      to: creditor.memberId,
-      amount
-    });
-
-    debtor.amount -= amount;
-    creditor.amount -= amount;
-
-    if (debtor.amount < 0.01) d++;
-    if (creditor.amount < 0.01) c++;
+  for (const [fromId, owes] of Object.entries(debtMap)) {
+    for (const [toId, amount] of Object.entries(owes)) {
+      if (amount > 0.01) {
+        transactions.push({ from: fromId, to: toId, amount });
+      }
+    }
   }
+
+  transactions.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
 
   return transactions;
 };
