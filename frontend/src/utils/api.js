@@ -79,6 +79,20 @@ export const calculateSettlements = (group) => {
 
   const addDebt = (fromId, toId, amount) => {
     if (!fromId || !toId || fromId === toId || amount <= 0) return;
+    const reverseAmount = debtMap[toId]?.[fromId] || 0;
+    if (reverseAmount > 0) {
+      if (reverseAmount > amount) {
+        debtMap[toId][fromId] = reverseAmount - amount;
+        return;
+      }
+      if (Math.abs(reverseAmount - amount) < 0.01) {
+        delete debtMap[toId][fromId];
+        return;
+      }
+      delete debtMap[toId][fromId];
+      amount -= reverseAmount;
+    }
+
     debtMap[fromId] ||= {};
     debtMap[fromId][toId] = (debtMap[fromId][toId] || 0) + amount;
   };
