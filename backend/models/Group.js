@@ -12,6 +12,10 @@ const MemberSchema = new mongoose.Schema({
   joinedAt: {
     type: Date,
     default: Date.now
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 });
 

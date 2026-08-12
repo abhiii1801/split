@@ -134,6 +134,67 @@ app.post('/api/group/:code/member', async (req, res) => {
   }
 });
 
+// Delete Member
+app.delete('/api/group/:code/member/:memberId', async (req, res) => {
+  try {
+    const { code, memberId } = req.params;
+    const { type } = req.query; // 'hard' or 'soft'
+
+    const group = await Group.findOne({ code });
+
+    if (!group) {
+      return res.status(404).json({
+        error: 'Group not found'
+      });
+    }
+
+    const member = group.members.find(m => m.id === memberId);
+    if (!member) {
+      return res.status(404).json({
+        error: 'Member not found'
+      });
+    }
+
+    if (type === 'soft') {
+      member.isActive = false;
+    } else if (type === 'hard') {
+      // 1. Remove member from members list
+      group.members = group.members.filter(m => m.id !== memberId);
+      
+      // 2. Remove any expenses where this member was the payer
+      group.expenses = group.expenses.filter(e => e.payerId !== memberId);
+      
+      // 3. For remaining expenses, remove member from splits
+      group.expenses.forEach(expense => {
+        if (expense.splits && expense.splits[memberId] !== undefined) {
+          delete expense.splits[memberId];
+          group.markModified(`expenses`); // Since splits is an Object, sometimes requires markModified, but usually pushing/setting works. Mongoose handles it if we replace the object, or just set it. Actually modifying sub-object properties might need markModified if not fully tracked, but we can just let save handle it since expenses is an array of subdocuments.
+        }
+      });
+      
+      // 4. Remove any payments involving this member
+      group.payments = group.payments.filter(
+        p => p.fromId !== memberId && p.toId !== memberId
+      );
+    } else {
+      return res.status(400).json({
+        error: 'Invalid deletion type. Must be "hard" or "soft".'
+      });
+    }
+
+    await group.save();
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
 // Add Expense
 app.post('/api/group/:code/expense', async (req, res) => {
   try {

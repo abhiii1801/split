@@ -26,6 +26,11 @@ export const addMember = async (code, name) => {
   return res.data;
 };
 
+export const removeMember = async (code, memberId, type = 'soft') => {
+  const res = await api.delete(`/group/${code}/member/${memberId}?type=${type}`);
+  return res.data;
+};
+
 export const addExpense = async (code, expense) => {
   const res = await api.post(`/group/${code}/expense`, expense);
   return res.data;
@@ -169,6 +174,12 @@ export const joinGroupLocal = (code, memberId) => {
       JSON.stringify(myGroups)
     );
   }
+};
+
+export const removeGroupLocal = (code) => {
+  let myGroups = getMyGroups();
+  myGroups = myGroups.filter(g => g.code !== code);
+  localStorage.setItem('split_my_groups', JSON.stringify(myGroups));
 };
 
 export const getMember = (group, memberId) => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createGroup, getGroup, joinGroupLocal, getMyGroups, addMember } from '../utils/api';
-import { Plus, LogIn, Users } from 'lucide-react';
+import { createGroup, getGroup, joinGroupLocal, getMyGroups, addMember, removeGroupLocal } from '../utils/api';
+import { Plus, LogIn, Users, Trash2 } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -10,12 +10,17 @@ export default function Home() {
   const [userName, setUserName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [joinName, setJoinName] = useState('');
+  const [groupToJoin, setGroupToJoin] = useState(null);
   const [myGroups, setMyGroups] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const loadGroups = () => {
     setMyGroups(getMyGroups());
+  };
+
+  useEffect(() => {
+    loadGroups();
   }, []);
 
   const handleCreate = async (e) => {
@@ -36,10 +41,10 @@ export default function Home() {
     }
   };
 
-  const handleJoin = async (e) => {
+  const handleFindGroup = async (e) => {
     e.preventDefault();
-    if (!joinCode || !joinName) {
-      setError('Please fill all fields');
+    if (!joinCode) {
+      setError('Please enter a group code');
       return;
     }
     setLoading(true);
@@ -50,21 +55,41 @@ export default function Home() {
         setLoading(false);
         return;
       }
-      
-      let member = group.members.find(m => m.name.toLowerCase() === joinName.toLowerCase());
-      let memberId;
-      if (member) {
-        memberId = member.id;
-      } else {
-        const res = await addMember(joinCode, joinName);
-        memberId = res.memberId;
-      }
+      setGroupToJoin(group);
+      setError('');
+    } catch (err) {
+      setError('Error finding group');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      joinGroupLocal(joinCode, memberId);
+  const handleJoinAsMember = (memberId) => {
+    joinGroupLocal(joinCode, memberId);
+    navigate(`/group/${joinCode}`);
+  };
+
+  const handleJoinAsNew = async () => {
+    if (!joinName.trim()) {
+      setError('Please enter your name');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await addMember(joinCode, joinName.trim());
+      joinGroupLocal(joinCode, res.memberId);
       navigate(`/group/${joinCode}`);
     } catch (err) {
-      setError('Error joining group');
+      setError('Error adding member');
       setLoading(false);
+    }
+  };
+
+  const handleRemoveGroup = (e, code) => {
+    e.stopPropagation();
+    if (window.confirm('Remove this group from your recent list? (Does not delete the group data)')) {
+      removeGroupLocal(code);
+      loadGroups();
     }
   };
 
@@ -85,7 +110,7 @@ export default function Home() {
         <div className="flex mb-4 gap-2">
           <button 
             className={`w-full py-2 font-semibold ${activeTab === 'join' ? 'text-primary border-b-2 border-primary' : 'text-muted'}`}
-            onClick={() => { setActiveTab('join'); setError(''); }}
+            onClick={() => { setActiveTab('join'); setError(''); setGroupToJoin(null); }}
             style={{ borderBottom: activeTab === 'join' ? '2px solid var(--primary)' : '2px solid transparent' }}
           >
             Join Group
@@ -102,28 +127,64 @@ export default function Home() {
         {error && <p className="text-danger text-sm text-center mb-4">{error}</p>}
 
         {activeTab === 'join' ? (
-          <form onSubmit={handleJoin} className="flex-col">
-            <label className="input-label">6-Digit Group Code</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. 123456" 
-              value={joinCode} 
-              onChange={(e) => setJoinCode(e.target.value)}
-              maxLength={6}
-            />
-            <label className="input-label">Your Name</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="Enter your name" 
-              value={joinName} 
-              onChange={(e) => setJoinName(e.target.value)}
-            />
-            <button type="submit" className="btn-primary mt-4" disabled={loading}>
-              <LogIn size={20} /> {loading ? 'Joining...' : 'Join'}
-            </button>
-          </form>
+          !groupToJoin ? (
+            <form onSubmit={handleFindGroup} className="flex-col">
+              <label className="input-label">6-Digit Group Code</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. 123456" 
+                value={joinCode} 
+                onChange={(e) => setJoinCode(e.target.value)}
+                maxLength={6}
+              />
+              <button type="submit" className="btn-primary mt-4" disabled={loading}>
+                <LogIn size={20} /> {loading ? 'Finding...' : 'Find Group'}
+              </button>
+            </form>
+          ) : (
+            <div className="flex-col gap-3">
+              <h3 className="font-semibold text-center mb-4">Join <span className="text-primary">{groupToJoin.name}</span> as:</h3>
+              <div className="flex-col gap-2 max-h-60 overflow-y-auto pr-2">
+                {groupToJoin.members.filter(m => m.isActive !== false).map(m => (
+                  <button 
+                    key={m.id} 
+                    className="btn-secondary w-full justify-start py-3"
+                    onClick={() => handleJoinAsMember(m.id)}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-2 my-2">
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }}></div>
+                <div className="text-xs text-muted font-semibold uppercase">OR</div>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border)' }}></div>
+              </div>
+
+              <input 
+                type="text" 
+                className="input-field mb-2" 
+                placeholder="New member name" 
+                value={joinName} 
+                onChange={(e) => setJoinName(e.target.value)}
+              />
+              <button 
+                className="btn-primary w-full" 
+                onClick={handleJoinAsNew}
+                disabled={loading}
+              >
+                <Plus size={20} /> Join as New Member
+              </button>
+              <button 
+                className="btn-secondary w-full mt-2 text-sm text-muted border-transparent bg-transparent hover:bg-black/5" 
+                onClick={() => setGroupToJoin(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          )
         ) : (
           <form onSubmit={handleCreate} className="flex-col">
             <label className="input-label">Group Name</label>
@@ -159,8 +220,18 @@ export default function Home() {
                   <h3 className="font-semibold text-primary">Code: {g.code}</h3>
                   <p className="text-xs text-muted">Joined: {new Date(g.joinedAt).toLocaleDateString()}</p>
                 </div>
-                <div className="btn-secondary" style={{ width: 'auto', padding: '8px 12px' }}>
-                  Open
+                <div className="flex items-center gap-2">
+                  <div className="btn-secondary" style={{ width: 'auto', padding: '8px 12px' }}>
+                    Open
+                  </div>
+                  <button 
+                    onClick={(e) => handleRemoveGroup(e, g.code)}
+                    className="p-2 text-muted hover:text-danger rounded-lg transition-colors"
+                    style={{ backgroundColor: 'var(--bg-main)', border: '1px solid var(--border)' }}
+                    title="Remove from recent"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             );

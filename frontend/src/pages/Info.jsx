@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGroup, getMyGroups, addCategory, deleteCategory } from '../utils/api';
+import { getGroup, getMyGroups, addCategory, deleteCategory, removeMember } from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { User, Copy, Check, Tag, Trash2, Plus } from 'lucide-react';
+import { User, Copy, Check, Tag, Trash2, Plus, UserX } from 'lucide-react';
 
 export default function Info() {
   const { code } = useParams();
@@ -14,6 +14,8 @@ export default function Info() {
   
   const [newCategory, setNewCategory] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
+  
+  const [memberToRemove, setMemberToRemove] = useState(null);
 
   const fetchGroup = async () => {
     try {
@@ -69,6 +71,22 @@ export default function Info() {
     }
   };
 
+  const confirmRemove = async (memberId, type) => {
+    const msg = type === 'hard' 
+      ? 'This will permanently remove them from all past transactions and recalculate settlements. Are you absolutely sure?'
+      : 'This will hide them from future transactions, but preserve their history. Proceed?';
+      
+    if (window.confirm(msg)) {
+      try {
+        await removeMember(code, memberId, type);
+        setMemberToRemove(null);
+        fetchGroup();
+      } catch (err) {
+        alert('Failed to remove member');
+      }
+    }
+  };
+
   if (loading) return <div className="page-content text-center mt-8 text-muted">Loading...</div>;
   if (!group) return null;
 
@@ -92,14 +110,54 @@ export default function Info() {
         <h2 className="text-lg font-semibold mb-4">Members ({group.members.length})</h2>
         <div className="flex-col gap-2 mb-8">
           {group.members.map(m => (
-            <div key={m.id} className="glass-card flex items-center gap-4 py-3" style={{ marginBottom: '8px' }}>
-              <div style={{ background: 'var(--primary)', padding: '10px', borderRadius: '50%' }}>
-                <User size={20} color="white" />
+            <div key={m.id} className="glass-card py-3" style={{ marginBottom: '8px' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div style={{ background: 'var(--primary)', padding: '10px', borderRadius: '50%', opacity: m.isActive === false ? 0.5 : 1 }}>
+                    <User size={20} color="white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold" style={{ opacity: m.isActive === false ? 0.5 : 1 }}>
+                      {m.name} {m.id === myMemberId && <span className="text-xs text-primary ml-2">(You)</span>}
+                      {m.isActive === false && <span className="text-xs text-danger ml-2">(Inactive)</span>}
+                    </p>
+                    <p className="text-xs text-muted">Joined: {new Date(m.joinedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                {m.id !== myMemberId && (
+                  <button 
+                    onClick={() => setMemberToRemove(memberToRemove === m.id ? null : m.id)}
+                    className="p-2 text-muted hover:text-danger rounded-lg transition-colors"
+                  >
+                    <UserX size={18} />
+                  </button>
+                )}
               </div>
-              <div>
-                <p className="font-semibold">{m.name} {m.id === myMemberId && <span className="text-xs text-primary ml-2">(You)</span>}</p>
-                <p className="text-xs text-muted">Joined: {new Date(m.joinedAt).toLocaleDateString()}</p>
-              </div>
+              
+              {memberToRemove === m.id && (
+                <div className="flex-col gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                  <p className="text-xs font-semibold text-muted mb-1">Remove {m.name}?</p>
+                  <button 
+                    onClick={() => confirmRemove(m.id, 'soft')} 
+                    className="btn-secondary w-full text-sm py-2 mb-2"
+                  >
+                    Remove from future only (Keep history)
+                  </button>
+                  <button 
+                    onClick={() => confirmRemove(m.id, 'hard')} 
+                    className="btn-tertiary text-danger w-full text-sm py-2"
+                    style={{ backgroundColor: 'rgba(239,68,68,0.1)' }}
+                  >
+                    Completely remove (Delete past data)
+                  </button>
+                  <button 
+                    onClick={() => setMemberToRemove(null)} 
+                    className="w-full text-xs text-muted mt-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

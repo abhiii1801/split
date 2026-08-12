@@ -135,7 +135,7 @@ export default function Settle() {
           )}
 
           <div className="flex-col gap-3">
-            {(group.payments || []).map(p => {
+            {[...(group.payments || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => {
               const fromName = getMember(group, p.fromId)?.name || 'Unknown';
               const toName = getMember(group, p.toId)?.name || 'Unknown';
               return (

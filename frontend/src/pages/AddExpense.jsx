@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGroup, addExpense, updateExpense } from '../utils/api';
+import { getGroup, addExpense, updateExpense, getMyGroups } from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { PlusCircle, Save } from 'lucide-react';
 
@@ -14,6 +14,7 @@ export default function AddExpense() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food');
   const [payerId, setPayerId] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [splitType, setSplitType] = useState('EQUAL'); 
   const [exactSplits, setExactSplits] = useState({});
   const [error, setError] = useState('');
@@ -48,9 +49,23 @@ export default function AddExpense() {
                 });
                 setExactSplits(splitsObj);
               }
+              if (exp.date) {
+                setDate(new Date(exp.date).toISOString().slice(0, 10));
+              }
             }
           } else {
-            if (data.members.length > 0) setPayerId(data.members[0].id);
+            const activeMembers = data.members.filter(m => m.isActive !== false);
+            if (activeMembers.length > 0) {
+              const myGroups = getMyGroups();
+              const currentGroup = myGroups.find(g => g.code === code);
+              const myMemberId = currentGroup ? currentGroup.memberId : null;
+              
+              if (myMemberId && activeMembers.find(m => m.id === myMemberId)) {
+                setPayerId(myMemberId);
+              } else {
+                setPayerId(activeMembers[0].id);
+              }
+            }
           }
         }
       } catch (err) {
@@ -105,7 +120,8 @@ export default function AddExpense() {
           category,
           payerId,
           splitType,
-          splits
+          splits,
+          date
         });
       } else {
         await addExpense(code, {
@@ -114,7 +130,8 @@ export default function AddExpense() {
           category,
           payerId,
           splitType,
-          splits
+          splits,
+          date
         });
       }
       navigate(`/group/${code}`);
@@ -152,6 +169,13 @@ export default function AddExpense() {
             value={amount} onChange={e => setAmount(e.target.value)} 
           />
 
+          <label className="input-label">Date</label>
+          <input 
+            type="date" 
+            className="input-field" 
+            value={date} onChange={e => setDate(e.target.value)} 
+          />
+
           <div className="flex gap-4 mb-4">
             <div className="w-full">
               <label className="input-label">Category</label>
@@ -164,7 +188,7 @@ export default function AddExpense() {
             <div className="w-full">
               <label className="input-label">Paid By</label>
               <select className="input-field" value={payerId} onChange={e => setPayerId(e.target.value)}>
-                {group.members.map(m => (
+                {group.members.filter(m => m.isActive !== false).map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
@@ -194,7 +218,7 @@ export default function AddExpense() {
           {splitType === 'EXACT' && (
             <div className="glass-card mb-4">
               <h3 className="text-sm font-semibold mb-2 text-muted">Enter exact amount for each person:</h3>
-              {group.members.map(m => (
+              {group.members.filter(m => m.isActive !== false).map(m => (
                 <div key={m.id} className="flex justify-between items-center mb-2">
                   <span>{m.name}</span>
                   <input 

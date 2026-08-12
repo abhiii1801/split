@@ -23,8 +23,8 @@ export default function MainFeed() {
   const [copied, setCopied] = useState(false);
   
   // Filters and Sort State
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [timeFilter, setTimeFilter] = useState('Today');
+  const [payerFilter, setPayerFilter] = useState('All');
+  const [timeFilter, setTimeFilter] = useState('This Month');
   const [sortOrder, setSortOrder] = useState('Newest First');
   
   const [showFilters, setShowFilters] = useState(false);
@@ -79,9 +79,9 @@ export default function MainFeed() {
   const getFilteredExpenses = () => {
     let result = group.expenses;
 
-    // 1. Category Filter
-    if (categoryFilter !== 'All') {
-      result = result.filter(e => e.category === categoryFilter);
+    // 1. Payer Filter
+    if (payerFilter !== 'All') {
+      result = result.filter(e => e.payerId === payerFilter);
     }
 
     // 2. Time Filter
@@ -195,32 +195,7 @@ export default function MainFeed() {
           </div>
         </div>
 
-        {/* Categories Horizontal Scroll */}
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider">Categories</p>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 pt-1" style={{ scrollbarWidth: 'none', margin: '0 -4px', padding: '4px' }}>
-            {categoriesList.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className="px-5 py-2.5 rounded-full font-semibold transition-all"
-                style={{
-                  fontSize: '14px',
-                  whiteSpace: 'nowrap',
-                  backgroundColor: categoryFilter === cat ? 'var(--primary)' : 'var(--bg-card)',
-                  color: categoryFilter === cat ? '#ffffff' : 'var(--text-main)',
-                  border: `1px solid ${categoryFilter === cat ? 'var(--primary)' : 'var(--border)'}`,
-                  boxShadow: categoryFilter === cat ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(0,0,0,0.02)',
-                  transform: categoryFilter === cat ? 'scale(1.02)' : 'scale(1)'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Activities Header */}
         <div className="flex justify-between items-center mb-4">
@@ -250,6 +225,16 @@ export default function MainFeed() {
                   <button onClick={() => setSortOrder('Newest First')} className={`px-4 py-2 rounded-lg text-xs font-medium w-full`} style={{ backgroundColor: sortOrder === 'Newest First' ? '#eff6ff' : '#f1f5f9', border: sortOrder === 'Newest First' ? '1px solid #bfdbfe' : '1px solid transparent', color: sortOrder === 'Newest First' ? 'var(--primary)' : 'var(--text-muted)' }}>Newest First</button>
                   <button onClick={() => setSortOrder('Oldest First')} className={`px-4 py-2 rounded-lg text-xs font-medium w-full`} style={{ backgroundColor: sortOrder === 'Oldest First' ? '#eff6ff' : '#f1f5f9', border: sortOrder === 'Oldest First' ? '1px solid #bfdbfe' : '1px solid transparent', color: sortOrder === 'Oldest First' ? 'var(--primary)' : 'var(--text-muted)' }}>Oldest First</button>
                 </div>
+              </div>
+
+              <div style={{ marginTop: '12px' }}>
+                <label className="input-label">Paid By</label>
+                <select className="input-field mb-2" value={payerFilter} onChange={(e) => setPayerFilter(e.target.value)}>
+                  <option value="All">All Members</option>
+                  {group.members.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
               </div>
               
               <div style={{ marginTop: '12px' }}>
