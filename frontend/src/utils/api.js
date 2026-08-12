@@ -157,29 +157,41 @@ export const getMyGroups = () => {
   return myGroups ? JSON.parse(myGroups) : [];
 };
 
-export const joinGroupLocal = (code, memberId) => {
+export const joinGroupLocal = (code, memberId, dontAskAgain = false) => {
   const myGroups = getMyGroups();
 
-  const existing = myGroups.find(g => g.code === code);
+  const existingIndex = myGroups.findIndex(g => g.code === code);
 
-  if (!existing) {
+  if (existingIndex !== -1) {
+    myGroups[existingIndex].memberId = memberId;
+    if (dontAskAgain) {
+      myGroups[existingIndex].dontAskAgain = true;
+    }
+  } else {
     myGroups.push({
       code,
       memberId,
-      joinedAt: new Date().toISOString()
+      joinedAt: new Date().toISOString(),
+      dontAskAgain
     });
-
-    localStorage.setItem(
-      'split_my_groups',
-      JSON.stringify(myGroups)
-    );
   }
+  
+  localStorage.setItem('split_my_groups', JSON.stringify(myGroups));
 };
 
 export const removeGroupLocal = (code) => {
   let myGroups = getMyGroups();
   myGroups = myGroups.filter(g => g.code !== code);
   localStorage.setItem('split_my_groups', JSON.stringify(myGroups));
+};
+
+export const resetDontAskAgain = (code) => {
+  const myGroups = getMyGroups();
+  const existingIndex = myGroups.findIndex(g => g.code === code);
+  if (existingIndex !== -1) {
+    myGroups[existingIndex].dontAskAgain = false;
+    localStorage.setItem('split_my_groups', JSON.stringify(myGroups));
+  }
 };
 
 export const getMember = (group, memberId) => {

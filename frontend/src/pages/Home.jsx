@@ -11,6 +11,7 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState('');
   const [joinName, setJoinName] = useState('');
   const [groupToJoin, setGroupToJoin] = useState(null);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
   const [myGroups, setMyGroups] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ export default function Home() {
   };
 
   const handleJoinAsMember = (memberId) => {
-    joinGroupLocal(joinCode, memberId);
+    joinGroupLocal(joinCode, memberId, dontAskAgain);
     navigate(`/group/${joinCode}`);
   };
 
@@ -77,7 +78,7 @@ export default function Home() {
     setLoading(true);
     try {
       const res = await addMember(joinCode, joinName.trim());
-      joinGroupLocal(joinCode, res.memberId);
+      joinGroupLocal(joinCode, res.memberId, dontAskAgain);
       navigate(`/group/${joinCode}`);
     } catch (err) {
       setError('Error adding member');
@@ -93,8 +94,27 @@ export default function Home() {
     }
   };
 
-  const openGroup = (code) => {
-    navigate(`/group/${code}`);
+  const openGroup = async (g) => {
+    if (g.dontAskAgain) {
+      navigate(`/group/${g.code}`);
+    } else {
+      setJoinCode(g.code);
+      setActiveTab('join');
+      setDontAskAgain(false);
+      setLoading(true);
+      try {
+        const group = await getGroup(g.code);
+        if (group) {
+          setGroupToJoin(group);
+        } else {
+          setError('Group not found');
+        }
+      } catch (err) {
+        setError('Error finding group');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   return (
@@ -170,6 +190,16 @@ export default function Home() {
                 value={joinName} 
                 onChange={(e) => setJoinName(e.target.value)}
               />
+              <label className="flex items-center gap-2 mt-2 mb-4 text-sm text-muted">
+                <input 
+                  type="checkbox" 
+                  checked={dontAskAgain} 
+                  onChange={e => setDontAskAgain(e.target.checked)} 
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                Don't ask me again for this group
+              </label>
+
               <button 
                 className="btn-primary w-full" 
                 onClick={handleJoinAsNew}
@@ -215,7 +245,7 @@ export default function Home() {
           <h2 className="text-lg font-bold mb-4">Recent Groups</h2>
           {myGroups.map((g, i) => {
             return (
-              <div key={i} className="glass-card flex items-center justify-between mb-2" onClick={() => openGroup(g.code)} style={{ cursor: 'pointer' }}>
+              <div key={i} className="glass-card flex items-center justify-between mb-2" onClick={() => openGroup(g)} style={{ cursor: 'pointer' }}>
                 <div>
                   <h3 className="font-semibold text-primary">Code: {g.code}</h3>
                   <p className="text-xs text-muted">Joined: {new Date(g.joinedAt).toLocaleDateString()}</p>

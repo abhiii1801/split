@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGroup, getMyGroups, addCategory, deleteCategory, removeMember } from '../utils/api';
+import { getGroup, getMyGroups, addCategory, deleteCategory, removeMember, resetDontAskAgain } from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { User, Copy, Check, Tag, Trash2, Plus, UserX } from 'lucide-react';
 
@@ -11,6 +11,7 @@ export default function Info() {
   const [copied, setCopied] = useState(false);
   const [myMemberId, setMyMemberId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dontAskAgainSet, setDontAskAgainSet] = useState(false);
   
   const [newCategory, setNewCategory] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
@@ -26,7 +27,10 @@ export default function Info() {
         setGroup(data);
         const myGroups = getMyGroups();
         const current = myGroups.find(g => g.code === code);
-        if (current) setMyMemberId(current.memberId);
+        if (current) {
+          setMyMemberId(current.memberId);
+          setDontAskAgainSet(current.dontAskAgain === true);
+        }
       }
     } catch (err) {
       navigate('/');
@@ -87,6 +91,13 @@ export default function Info() {
     }
   };
 
+  const handleResetIdentity = () => {
+    if (window.confirm("This will prompt you to choose your identity again next time you open this group from the home screen. Proceed?")) {
+      resetDontAskAgain(code);
+      setDontAskAgainSet(false);
+    }
+  };
+
   if (loading) return <div className="page-content text-center mt-8 text-muted">Loading...</div>;
   if (!group) return null;
 
@@ -106,6 +117,18 @@ export default function Info() {
             </button>
           </div>
         </div>
+
+        {dontAskAgainSet && (
+          <div className="glass-card mb-6 flex items-center justify-between" style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}>
+            <div>
+              <h3 className="font-semibold text-sm text-primary">Switch Identity</h3>
+              <p className="text-xs text-muted mt-1">You are currently skipping the identity prompt on login.</p>
+            </div>
+            <button onClick={handleResetIdentity} className="btn-primary" style={{ width: 'auto', padding: '8px 12px', fontSize: '12px' }}>
+              Reset Preference
+            </button>
+          </div>
+        )}
 
         <h2 className="text-lg font-semibold mb-4">Members ({group.members.length})</h2>
         <div className="flex-col gap-2 mb-8">
