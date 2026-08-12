@@ -185,12 +185,12 @@ export default function Home() {
 
               <input 
                 type="text" 
-                className="input-field mb-2" 
+                className="input-field mb-0" 
                 placeholder="New member name" 
                 value={joinName} 
                 onChange={(e) => setJoinName(e.target.value)}
               />
-              <label className="flex items-center gap-2 mt-2 mb-4 text-sm text-muted">
+              <label className="flex items-center gap-2 mt-4 mb-6 text-sm text-muted px-1">
                 <input 
                   type="checkbox" 
                   checked={dontAskAgain} 
